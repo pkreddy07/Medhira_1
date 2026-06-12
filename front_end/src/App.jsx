@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { ConsultationsProvider } from './hooks/useConsultations'; // Now this exists!
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -13,6 +14,7 @@ import './styles/global.css';
 
 function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <AuthProvider>
         <ConsultationsProvider>
@@ -48,6 +50,7 @@ function App() {
         </ConsultationsProvider>
       </AuthProvider>
     </Router>
+    </ErrorBoundary>
   );
 }
 

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Upload, Check, X, Cloud, Download } from 'lucide-react';
 import googleDriveService from '../../services/googleDrive';
+import { getClinicSettings } from '../../utils/clinicSettings';
 
 const SummaryEditor = ({ summary, onSave }) => {
   const [formData, setFormData] = useState(summary);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [isDriveConnected, setIsDriveConnected] = useState(false);
+  const [clinicSettings] = useState(getClinicSettings());
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   // Check Google Drive connection status
   useEffect(() => {
@@ -125,6 +128,29 @@ const SummaryEditor = ({ summary, onSave }) => {
     
     if (onSave) {
       onSave(formData);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setIsPdfLoading(true);
+      const { pdf } = await import('@react-pdf/renderer');
+      const { default: ClinicPrescriptionPDF } = await import('./ClinicPrescriptionPDF');
+      const element = React.createElement(ClinicPrescriptionPDF, { summary: formData, clinic: clinicSettings });
+      const blob = await pdf(element).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Prescription_${formData.patientName || 'Patient'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      setUploadStatus({ type: 'error', message: 'PDF generation failed. Please try again.' });
+    } finally {
+      setIsPdfLoading(false);
     }
   };
 
@@ -377,7 +403,17 @@ ${formData.followUp || 'Not specified'}
             Save Locally
           </button>
 
-          <button 
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={handleDownloadPDF}
+            disabled={isPdfLoading}
+          >
+            <Download size={18} />
+            {isPdfLoading ? 'Preparing PDF...' : 'Download as PDF'}
+          </button>
+
+          <button
             type="button"
             onClick={downloadAsText}
             className="button button-secondary"
@@ -386,7 +422,7 @@ ${formData.followUp || 'Not specified'}
             Download as Text
           </button>
 
-          <button 
+          <button
             type="button"
             onClick={downloadAsJSON}
             className="button button-secondary"
