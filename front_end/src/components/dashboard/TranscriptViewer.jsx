@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save, Edit } from 'lucide-react';
 
 const TranscriptViewer = ({ transcript, onSave }) => {
   const [editedTranscript, setEditedTranscript] = useState(transcript);
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    setEditedTranscript(transcript);
+  }, [transcript]);
 
   const handleSave = () => {
     onSave(editedTranscript);

@@ -452,3 +452,39 @@ export const deleteConsultation = async (req, res) => {
     });
   }
 };
+
+export const regenerateSummary = async (req, res) => {
+  try {
+    const { consultationId } = req.params;
+    const { transcript } = req.body;
+
+    if (!transcript || transcript.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Transcript is required' });
+    }
+
+    const consultation = await Consultation.findOne({ _id: consultationId, user: req.user.id });
+    if (!consultation) {
+      return res.status(404).json({ success: false, message: 'Consultation not found' });
+    }
+
+    await Consultation.findByIdAndUpdate(consultationId, { status: 'summarizing' });
+
+    const summary = await generateMedicalSummary(transcript);
+
+    const updateData = { ...summary, transcript, status: 'completed', processedAt: new Date() };
+
+    const requiredFields = ['patientName', 'age', 'gender', 'symptoms', 'history', 'examination', 'diagnosis', 'medication', 'followUp'];
+    requiredFields.forEach(field => {
+      if (!updateData[field]) updateData[field] = 'Not specified';
+    });
+
+    const updated = await Consultation.findByIdAndUpdate(consultationId, updateData, { new: true });
+
+    console.log('✅ Summary regenerated for consultation:', consultationId);
+    res.json({ success: true, consultation: updated });
+
+  } catch (error) {
+    console.error('❌ Regenerate summary error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to regenerate summary' });
+  }
+};

@@ -129,6 +129,13 @@ async uploadAudio(audioBlob) {
 async getAudioStatus(consultationId) {
   return this.request(`/audio/status/${consultationId}`);
 }
+
+async regenerateSummary(consultationId, transcript) {
+  return this.request(`/audio/consultation/${consultationId}/regenerate`, {
+    method: 'PUT',
+    body: JSON.stringify({ transcript })
+  });
+}
 }
 
 export default new ApiService();

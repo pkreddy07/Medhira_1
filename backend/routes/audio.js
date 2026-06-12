@@ -1,12 +1,13 @@
 // routes/audio.js
 import express from 'express';
-import { 
-  processAudio, 
+import {
+  processAudio,
   getProcessingStatus,
   getUserConsultations,
   getConsultationDetails,
   deleteConsultation,
-  processAudioStepByStep 
+  processAudioStepByStep,
+  regenerateSummary
 } from '../controllers/audioController.js';
 import { protect } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -60,6 +61,8 @@ router.get('/consultation/:consultationId', protect, getConsultationDetails);
  * @param   {string} consultationId - Consultation ID
  */
 router.delete('/consultation/:consultationId', protect, deleteConsultation);
+
+router.put('/consultation/:consultationId/regenerate', protect, regenerateSummary);
 
 // 🎧 Legacy endpoint - kept for backward compatibility
 /**

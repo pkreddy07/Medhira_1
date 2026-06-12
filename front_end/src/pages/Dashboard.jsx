@@ -16,6 +16,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('record');
   const [transcript, setTranscript] = useState('');
   const [summary, setSummary] = useState(null);
+  const [consultationId, setConsultationId] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
 
@@ -37,6 +38,7 @@ const Dashboard = () => {
       
       if (statusResponse.status === 'completed') {
         const { consultation } = statusResponse;
+        setConsultationId(consultation._id);
         setTranscript(consultation.transcript);
         setSummary(consultation);
         setActiveTab('transcript');
@@ -64,23 +66,19 @@ const Dashboard = () => {
 };
 
   const handleTranscriptSave = async (editedTranscript) => {
-    console.log('Saving transcript:', editedTranscript);
-    
-    // Mock summary generation
-    const mockSummary = {
-      patientName: 'John Smith',
-      age: '45',
-      gender: 'Male',
-      symptoms: 'Persistent headaches, pain level 6-7/10',
-      history: 'No significant past medical history',
-      examination: 'Neurological examination normal',
-      diagnosis: 'Tension headaches',
-      medication: 'Ibuprofen 400mg as needed',
-      followUp: 'Return in 2 weeks if symptoms persist'
-    };
-    
-    setSummary(mockSummary);
-    setActiveTab('summary');
+    try {
+      setUploadStatus({ type: 'processing', message: 'Regenerating summary from edited transcript...' });
+
+      const result = await apiService.regenerateSummary(consultationId, editedTranscript);
+
+      setTranscript(editedTranscript);
+      setSummary(result.consultation);
+      setActiveTab('summary');
+      setUploadStatus(null);
+    } catch (error) {
+      console.error('Failed to regenerate summary:', error);
+      setUploadStatus({ type: 'error', message: 'Failed to regenerate summary. Please try again.' });
+    }
   };
 
   const handleSummarySave = async (summaryData) => {
