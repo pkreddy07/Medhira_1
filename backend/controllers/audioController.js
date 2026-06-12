@@ -113,7 +113,7 @@ export const processAudio = async (req, res) => {
     console.log('📝 Created consultation record:', consultation._id);
 
     // Process in background
-    processAudioBackground(consultation._id, req.file.path);
+    processAudioBackground(consultation._id, req.file.path, req.file.mimetype);
 
     res.json({
       success: true,
@@ -138,7 +138,7 @@ export const processAudio = async (req, res) => {
 };
 
 // Enhanced background processing with better error handling and progress tracking
-const processAudioBackground = async (consultationId, audioPath) => {
+const processAudioBackground = async (consultationId, audioPath, mimeType = 'audio/webm') => {
   let processingSuccess = false;
   
   try {
@@ -164,7 +164,7 @@ const processAudioBackground = async (consultationId, audioPath) => {
 
     // ALWAYS use processMedicalAudio - it now handles fallback automatically
     console.log('🔧 Starting audio processing with automatic fallback...');
-    processingResult = await processMedicalAudio(audioPath);
+    processingResult = await processMedicalAudio(audioPath, mimeType);
 
     // Check if processing was successful
     if (!processingResult.success) {
@@ -259,7 +259,7 @@ export const processAudioStepByStep = async (req, res) => {
     try {
       // Step 1: Transcription (now handles fallback automatically)
       await Consultation.findByIdAndUpdate(consultation._id, { status: 'transcribing' });
-      transcript = await transcribeAudio(req.file.path);
+      transcript = await transcribeAudio(req.file.path, req.file.mimetype);
 
       // Step 2: Update with transcript
       await Consultation.findByIdAndUpdate(consultation._id, {

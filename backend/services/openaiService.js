@@ -1,39 +1,47 @@
 // services/openaiService.js
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import dotenv from 'dotenv';
 import fs from 'fs';
 
-dotenv.config();
-
-// Configuration
-const config = {
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY,
-  },
-  whisper: {
-    model: "whisper-1",
-    response_format: "verbose_json",
-    language: "en",
-    temperature: 0.0,
-  },
-  gpt: {
-    model: "gpt-3.5-turbo",
-    temperature: 0.1,
-    max_tokens: 1500,
-  }
+const MIME_TO_EXT = {
+  'audio/webm': 'webm',
+  'audio/mpeg': 'mp3',
+  'audio/mp4': 'mp4',
+  'audio/wav': 'wav',
+  'audio/ogg': 'ogg',
+  'audio/m4a': 'm4a',
+  'audio/flac': 'flac',
+  'audio/opus': 'opus',
 };
 
-// Validate API key
-const hasValidApiKey = process.env.OPENAI_API_KEY && 
-                       process.env.OPENAI_API_KEY.startsWith('sk-') && 
-                       process.env.OPENAI_API_KEY.length > 20;
+dotenv.config();
 
-console.log('🔑 OpenAI API Key present:', !!process.env.OPENAI_API_KEY);
-console.log('🔑 OpenAI API Key valid:', hasValidApiKey);
+// Groq uses the OpenAI SDK with a different baseURL — no extra package needed
+const hasValidApiKey = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 10);
 
-const openai = hasValidApiKey ? new OpenAI(config.openai) : null;
+console.log('🔑 Groq API Key present:', hasValidApiKey);
 
-// Medical summary prompt template
+const client = hasValidApiKey
+  ? new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+    })
+  : null;
+
+const config = {
+  whisper: {
+    model: 'whisper-large-v3',
+    response_format: 'json',
+    language: 'en',
+    temperature: 0.0,
+  },
+  chat: {
+    model: 'llama-3.3-70b-versatile',
+    temperature: 0.1,
+    max_tokens: 1500,
+  },
+};
+
 const MEDICAL_SUMMARY_PROMPT = `
 You are a medical assistant analyzing a doctor-patient consultation transcript. Extract key medical information and structure it into a professional medical summary.
 
@@ -54,88 +62,82 @@ Please analyze this transcript and return a structured JSON object with the foll
 Return ONLY valid JSON, no additional text.
 `;
 
-/**
- * Transcribe audio using Whisper
- * @param {string} audioPath - Path to audio file
- * @returns {Promise<string>} Transcribed text
- */
-export const transcribeAudio = async (audioPath) => {
+export const transcribeAudio = async (audioPath, mimeType = 'audio/webm') => {
   try {
-    // Auto-fallback to mock if no valid API key
     if (!hasValidApiKey) {
-      console.log('🔧 No valid OpenAI API key, using mock transcription');
+      console.log('🔧 No valid Groq API key, using mock transcription');
       return await mockTranscribeAudio(audioPath);
     }
 
-    console.log('🎯 Starting Whisper audio transcription...');
-    
+    console.log('🎯 Starting Groq Whisper audio transcription...');
+
     if (!fs.existsSync(audioPath)) {
       throw new Error(`Audio file not found: ${audioPath}`);
     }
 
-    const transcription = await openai.audio.transcriptions.create({
-      file: fs.createReadStream(audioPath),
+    const ext = MIME_TO_EXT[mimeType] || 'webm';
+    const audioFile = await toFile(
+      fs.createReadStream(audioPath),
+      `audio.${ext}`,
+      { type: mimeType }
+    );
+
+    const transcription = await client.audio.transcriptions.create({
+      file: audioFile,
       ...config.whisper,
     });
 
-    console.log('✅ Whisper transcription completed');
+    console.log('✅ Groq Whisper transcription completed');
     return transcription.text;
 
   } catch (error) {
     console.error('❌ Whisper transcription failed:', error.message);
-    
-    // Auto-fallback to mock data on any API error
     console.log('🔧 Falling back to mock transcription due to API error');
     return await mockTranscribeAudio(audioPath);
   }
 };
 
-/**
- * Generate medical summary using GPT-3.5
- * @param {string} transcript - Transcribed text from audio
- * @returns {Promise<Object>} Structured medical summary
- */
 export const generateMedicalSummary = async (transcript) => {
   try {
     if (!transcript || transcript.trim().length === 0) {
       throw new Error('Empty transcript provided');
     }
 
-    // Auto-fallback to mock if no valid API key
     if (!hasValidApiKey) {
-      console.log('🔧 No valid OpenAI API key, using mock medical summary');
+      console.log('🔧 No valid Groq API key, using mock medical summary');
       return await mockGenerateMedicalSummary(transcript);
     }
 
-    console.log('🎯 Generating medical summary with GPT-3.5...');
+    console.log('🎯 Generating medical summary with Groq Llama...');
 
     const prompt = MEDICAL_SUMMARY_PROMPT.replace('{transcript}', transcript);
 
-    const completion = await openai.chat.completions.create({
-      model: config.gpt.model,
+    const completion = await client.chat.completions.create({
+      model: config.chat.model,
       messages: [
         {
-          role: "system",
-          content: "You are a medical transcription specialist. Extract structured medical information from doctor-patient conversations and return valid JSON only."
+          role: 'system',
+          content: 'You are a medical transcription specialist. Extract structured medical information from doctor-patient conversations and return valid JSON only.',
         },
         {
-          role: "user",
-          content: prompt
-        }
+          role: 'user',
+          content: prompt,
+        },
       ],
-      temperature: config.gpt.temperature,
-      max_tokens: config.gpt.max_tokens
+      temperature: config.chat.temperature,
+      max_tokens: config.chat.max_tokens,
     });
 
-    const summaryText = completion.choices[0].message.content.trim();
-    
+    const raw = completion.choices[0].message.content.trim();
+    // Strip markdown code fences (```json ... ``` or ``` ... ```)
+    const summaryText = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+
     try {
       const summaryData = JSON.parse(summaryText);
-      console.log('✅ GPT-3.5 medical summary generated successfully');
+      console.log('✅ Groq medical summary generated successfully');
       return summaryData;
     } catch (parseError) {
-      console.error('❌ Failed to parse GPT-3.5 response as JSON:', summaryText);
-      // Attempt to extract JSON if wrapped in other text
+      console.error('❌ Failed to parse response as JSON:', summaryText);
       const jsonMatch = summaryText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
@@ -143,54 +145,37 @@ export const generateMedicalSummary = async (transcript) => {
           console.log('✅ Extracted JSON from response');
           return extractedJson;
         } catch (e) {
-          // If extraction fails, fallback to mock
           console.log('🔧 Falling back to mock summary due to JSON parse error');
           return await mockGenerateMedicalSummary(transcript);
         }
       }
-      // Fallback to mock data
       console.log('🔧 Falling back to mock summary due to invalid response');
       return await mockGenerateMedicalSummary(transcript);
     }
 
   } catch (error) {
-    console.error('❌ GPT-3.5 medical summary generation failed:', error.message);
-    // Auto-fallback to mock data on any error
+    console.error('❌ Groq medical summary generation failed:', error.message);
     console.log('🔧 Falling back to mock medical summary due to API error');
     return await mockGenerateMedicalSummary(transcript);
   }
 };
 
-/**
- * Process audio and generate medical summary in one call
- * @param {string} audioPath - Path to audio file
- * @returns {Promise<Object>} Object containing transcript and summary
- */
-export const processMedicalAudio = async (audioPath) => {
+export const processMedicalAudio = async (audioPath, mimeType = 'audio/webm') => {
   try {
     console.log('🔄 Starting medical audio processing...');
-    
-    const transcript = await transcribeAudio(audioPath);
+
+    const transcript = await transcribeAudio(audioPath, mimeType);
     const summary = await generateMedicalSummary(transcript);
-    
+
     console.log('✅ Medical audio processing completed');
-    return {
-      transcript,
-      summary,
-      success: true
-    };
+    return { transcript, summary, success: true };
   } catch (error) {
     console.error('❌ Medical audio processing failed:', error.message);
-    return {
-      success: false,
-      error: error.message,
-      transcript: null,
-      summary: null
-    };
+    return { success: false, error: error.message, transcript: null, summary: null };
   }
 };
 
-// Mock functions for development
+// Mock data for fallback
 const MOCK_TRANSCRIPT = `DOCTOR: Good morning, how are you feeling today?
 PATIENT: Not too bad, doctor. Still having some headaches though.
 DOCTOR: On a scale of 1-10, how severe is the pain?
@@ -204,53 +189,33 @@ PATIENT: Thank you, doctor.
 DOCTOR: Follow up in 2 weeks if the symptoms persist.`;
 
 const MOCK_SUMMARY = {
-  patientName: "John Smith",
-  age: "45",
-  gender: "Male",
-  symptoms: "Persistent headaches, pain level 6-7/10, occasional dizziness",
-  history: "Family history of migraines (mother)",
-  examination: "Blood pressure 130/85 - normal",
-  diagnosis: "Tension headaches",
-  medication: "Ibuprofen as needed for pain relief",
-  followUp: "Return in 2 weeks if symptoms persist, practice stress management techniques"
+  patientName: 'John Smith',
+  age: '45',
+  gender: 'Male',
+  symptoms: 'Persistent headaches, pain level 6-7/10, occasional dizziness',
+  history: 'Family history of migraines (mother)',
+  examination: 'Blood pressure 130/85 - normal',
+  diagnosis: 'Tension headaches',
+  medication: 'Ibuprofen as needed for pain relief',
+  followUp: 'Return in 2 weeks if symptoms persist, practice stress management techniques',
 };
 
-/**
- * Mock transcription for development
- * @param {string} audioPath - Path to audio file
- * @returns {Promise<string>} Mock transcript
- */
 export const mockTranscribeAudio = async (audioPath) => {
   console.log('🎯 Using mock transcription for development...');
   await new Promise(resolve => setTimeout(resolve, 2000));
   return MOCK_TRANSCRIPT;
 };
 
-/**
- * Mock medical summary for development
- * @param {string} transcript - Transcript text
- * @returns {Promise<Object>} Mock medical summary
- */
 export const mockGenerateMedicalSummary = async (transcript) => {
   console.log('🎯 Using mock medical summary for development...');
   await new Promise(resolve => setTimeout(resolve, 1000));
   return MOCK_SUMMARY;
 };
 
-/**
- * Mock processing for development
- * @param {string} audioPath - Path to audio file
- * @returns {Promise<Object>} Mock processing result
- */
 export const mockProcessMedicalAudio = async (audioPath) => {
   console.log('🎯 Using mock medical audio processing for development...');
   await new Promise(resolve => setTimeout(resolve, 3000));
-  return {
-    transcript: MOCK_TRANSCRIPT,
-    summary: MOCK_SUMMARY,
-    success: true,
-    mock: true
-  };
+  return { transcript: MOCK_TRANSCRIPT, summary: MOCK_SUMMARY, success: true, mock: true };
 };
 
 export default {
@@ -259,5 +224,5 @@ export default {
   processMedicalAudio,
   mockTranscribeAudio,
   mockGenerateMedicalSummary,
-  mockProcessMedicalAudio
+  mockProcessMedicalAudio,
 };
