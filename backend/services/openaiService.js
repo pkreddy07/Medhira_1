@@ -52,15 +52,38 @@ Please analyze this transcript and return a structured JSON object with the foll
 - patientName: Extract or infer patient's name if mentioned, otherwise use "Patient"
 - age: Extract patient's age if mentioned, otherwise use "Not specified"
 - gender: Extract patient's gender if mentioned, otherwise use "Not specified"
-- symptoms: Detailed description of patient's symptoms and chief complaint
-- history: Relevant medical history mentioned
-- examination: Physical examination findings mentioned
-- diagnosis: Doctor's diagnosis or assessment
-- medication: Medications, dosage, and treatment prescribed
-- followUp: Follow-up instructions or recommendations
+- symptoms: A single plain string of ALL symptoms present — include symptoms the patient stated directly AND symptoms the patient confirmed (explicitly or indirectly) in response to the doctor's questions. If the doctor asks "do you have X?" and the patient says "yes", "kind of", "a little", "I think so", or any affirmative/partial agreement, include X as a symptom. If the patient denies a symptom, do not include it.
+- history: A single plain string of relevant medical history — include history the patient stated directly AND history confirmed in response to the doctor's questions (e.g. doctor asks "any family history of X?", patient says "yes" → include it)
+- examination: A single plain string of physical examination findings mentioned
+- diagnosis: A single plain string of the doctor's diagnosis or assessment
+- medication: A single plain string of medications, dosage, and treatment prescribed
+- followUp: A single plain string of follow-up instructions or recommendations
 
-Return ONLY valid JSON, no additional text.
+IMPORTANT: Every field value MUST be a plain string. Do NOT use nested objects, arrays, or sub-fields.
+
+Return ONLY valid JSON, no additional text, no markdown fences.
 `;
+
+// Ensures all summary fields are plain strings (LLMs sometimes return nested objects)
+const toStr = (val) => {
+  if (val === null || val === undefined) return 'Not specified';
+  if (typeof val === 'string') return val;
+  if (Array.isArray(val)) return val.map(toStr).join(', ');
+  if (typeof val === 'object') return Object.values(val).map(toStr).join(', ');
+  return String(val);
+};
+
+const VALID_GENDERS = ['Male', 'Female', 'Other'];
+
+const flattenSummary = (summary) => {
+  const fields = ['patientName', 'age', 'gender', 'symptoms', 'history', 'examination', 'diagnosis', 'medication', 'followUp'];
+  const result = {};
+  fields.forEach(field => { result[field] = toStr(summary[field]); });
+  // Normalize gender to match schema enum
+  const g = result.gender;
+  result.gender = VALID_GENDERS.find(v => v.toLowerCase() === g.toLowerCase()) || 'Other';
+  return result;
+};
 
 export const transcribeAudio = async (audioPath, mimeType = 'audio/webm') => {
   try {
@@ -133,7 +156,7 @@ export const generateMedicalSummary = async (transcript) => {
     const summaryText = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
     try {
-      const summaryData = JSON.parse(summaryText);
+      const summaryData = flattenSummary(JSON.parse(summaryText));
       console.log('✅ Groq medical summary generated successfully');
       return summaryData;
     } catch (parseError) {
@@ -141,7 +164,7 @@ export const generateMedicalSummary = async (transcript) => {
       const jsonMatch = summaryText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
-          const extractedJson = JSON.parse(jsonMatch[0]);
+          const extractedJson = flattenSummary(JSON.parse(jsonMatch[0]));
           console.log('✅ Extracted JSON from response');
           return extractedJson;
         } catch (e) {
