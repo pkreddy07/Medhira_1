@@ -5,14 +5,17 @@ import { Save, Cloud, Check, X, AlertCircle, TestTube } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import googleDriveService from '../services/googleDrive';
+import { getClinicSettings, saveClinicSettings } from '../utils/clinicSettings';
 import '../styles/settings.css';
 
 const SettingsPage = () => {
   const { user } = useAuth();
   const [settings, setSettings] = useState({
-    username: user?.username || user?.name || '', // Handle both JWT and Firebase
+    username: user?.username || user?.name || '',
     email: user?.email || '',
   });
+  const [clinicSettings, setClinicSettings] = useState(getClinicSettings());
+  const [clinicSaveStatus, setClinicSaveStatus] = useState('');
   const [driveConnected, setDriveConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -97,6 +100,17 @@ const SettingsPage = () => {
     }
   };
 
+  const handleClinicChange = (field, value) => {
+    setClinicSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClinicSave = (e) => {
+    e.preventDefault();
+    saveClinicSettings(clinicSettings);
+    setClinicSaveStatus('success');
+    setTimeout(() => setClinicSaveStatus(''), 3000);
+  };
+
   const handleGoogleDriveDisconnect = () => {
     googleDriveService.disconnect();
     setDriveConnected(false);
@@ -151,6 +165,83 @@ const SettingsPage = () => {
         </div>
 
         <div className="settings-content">
+
+          {/* ── Clinic / Prescription Header ── */}
+          <form onSubmit={handleClinicSave} className="settings-form" style={{ marginBottom: '2rem' }}>
+            <div className="settings-section">
+              <h2>Clinic &amp; Prescription Header</h2>
+              <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                This information appears at the top of every PDF prescription you download.
+              </p>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Clinic / Hospital Name</label>
+                  <input type="text" className="form-input"
+                    value={clinicSettings.clinicName}
+                    onChange={e => handleClinicChange('clinicName', e.target.value)}
+                    placeholder="e.g. City Health Clinic" />
+                </div>
+                <div className="form-group">
+                  <label>Doctor Name</label>
+                  <input type="text" className="form-input"
+                    value={clinicSettings.doctorName}
+                    onChange={e => handleClinicChange('doctorName', e.target.value)}
+                    placeholder="e.g. Arjun Sharma" />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Qualification / Specialisation</label>
+                  <input type="text" className="form-input"
+                    value={clinicSettings.qualification}
+                    onChange={e => handleClinicChange('qualification', e.target.value)}
+                    placeholder="e.g. MBBS, MD (General Medicine)" />
+                </div>
+                <div className="form-group">
+                  <label>Registration Number</label>
+                  <input type="text" className="form-input"
+                    value={clinicSettings.registrationNo}
+                    onChange={e => handleClinicChange('registrationNo', e.target.value)}
+                    placeholder="e.g. MCI-12345" />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Clinic Address</label>
+                <input type="text" className="form-input"
+                  value={clinicSettings.address}
+                  onChange={e => handleClinicChange('address', e.target.value)}
+                  placeholder="e.g. 12 Main Road, Hyderabad, Telangana 500001" />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input type="text" className="form-input"
+                    value={clinicSettings.phone}
+                    onChange={e => handleClinicChange('phone', e.target.value)}
+                    placeholder="e.g. +91 98765 43210" />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" className="form-input"
+                    value={clinicSettings.email}
+                    onChange={e => handleClinicChange('email', e.target.value)}
+                    placeholder="e.g. doctor@clinic.com" />
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-actions">
+              <button type="submit" className={`button button-primary ${clinicSaveStatus}`}>
+                <Save size={18} />
+                {clinicSaveStatus === 'success' ? 'Saved!' : 'Save Clinic Settings'}
+              </button>
+            </div>
+          </form>
+
           <form onSubmit={handleSave} className="settings-form">
             <div className="settings-section">
               <h2>Profile Information</h2>
