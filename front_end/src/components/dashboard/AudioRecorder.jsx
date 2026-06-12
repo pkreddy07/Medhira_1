@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Upload, Play, Pause, Trash2 } from 'lucide-react';
+import apiService from '../../services/api';
 
 const AudioRecorder = ({ onRecordingComplete, isRecording, setIsRecording, consultationId, onStatusUpdate }) => {
   const [recordingTime, setRecordingTime] = useState(0);
@@ -30,15 +31,7 @@ const AudioRecorder = ({ onRecordingComplete, isRecording, setIsRecording, consu
 
   const checkProcessingStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/audio/status/${consultationId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const data = await response.json();
+      const data = await apiService.getAudioStatus(consultationId);
       
       if (data.success) {
         setProcessingStatus(data.status);
@@ -318,7 +311,10 @@ const AudioRecorder = ({ onRecordingComplete, isRecording, setIsRecording, consu
               <strong>Diagnosis:</strong> {consultationData.diagnosis}
             </div>
             <div className="result-item full-width">
-              <strong>Prescription:</strong> {consultationData.prescription}
+              <strong>Medication:</strong> {consultationData.medication}
+            </div>
+            <div className="result-item full-width">
+              <strong>Follow-up:</strong> {consultationData.followUp}
             </div>
           </div>
         </div>

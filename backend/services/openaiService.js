@@ -48,7 +48,7 @@ Please analyze this transcript and return a structured JSON object with the foll
 - history: Relevant medical history mentioned
 - examination: Physical examination findings mentioned
 - diagnosis: Doctor's diagnosis or assessment
-- prescription: Medications or treatments prescribed
+- medication: Medications, dosage, and treatment prescribed
 - followUp: Follow-up instructions or recommendations
 
 Return ONLY valid JSON, no additional text.
@@ -211,7 +211,7 @@ const MOCK_SUMMARY = {
   history: "Family history of migraines (mother)",
   examination: "Blood pressure 130/85 - normal",
   diagnosis: "Tension headaches",
-  prescription: "Ibuprofen as needed for pain relief",
+  medication: "Ibuprofen as needed for pain relief",
   followUp: "Return in 2 weeks if symptoms persist, practice stress management techniques"
 };
 

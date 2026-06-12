@@ -188,7 +188,7 @@ const processAudioBackground = async (consultationId, audioPath) => {
     };
 
     // Ensure all required fields have values
-    const requiredFields = ['patientName', 'age', 'gender', 'symptoms', 'history', 'examination', 'diagnosis', 'prescription', 'followUp'];
+    const requiredFields = ['patientName', 'age', 'gender', 'symptoms', 'history', 'examination', 'diagnosis', 'medication', 'followUp'];
     requiredFields.forEach(field => {
       if (!updateData[field] || updateData[field] === '') {
         updateData[field] = 'Not specified';

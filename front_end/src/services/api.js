@@ -89,6 +89,12 @@ class ApiService {
     });
   }
 
+  async deleteConsultation(id) {
+    return this.request(`/consultations/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
   // User endpoints
   async updateProfile(userData) {
     return this.request('/users/profile', {

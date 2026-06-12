@@ -128,6 +128,33 @@ const SummaryEditor = ({ summary, onSave }) => {
     }
   };
 
+  const getMedicationText = () => formData.medication || 'Not specified';
+
+  const downloadAsJSON = () => {
+    const payload = {
+      patientName: formData.patientName,
+      age: formData.age,
+      gender: formData.gender,
+      symptoms: formData.symptoms,
+      history: formData.history || 'Not specified',
+      examination: formData.examination || 'Not specified',
+      diagnosis: formData.diagnosis,
+      medication: getMedicationText(),
+      followUp: formData.followUp || 'Not specified',
+      generatedAt: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Medical_Summary_${formData.patientName}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const downloadAsText = () => {
     const content = `
 MEDICAL SUMMARY - ${formData.patientName}
@@ -150,8 +177,8 @@ ${formData.examination || 'Not specified'}
 DIAGNOSIS:
 ${formData.diagnosis}
 
-PRESCRIPTION:
-${formData.prescription || 'Not specified'}
+MEDICATION:
+${getMedicationText()}
 
 FOLLOW-UP:
 ${formData.followUp || 'Not specified'}
@@ -299,11 +326,13 @@ ${formData.followUp || 'Not specified'}
         </div>
 
         <div className="form-group">
-          <label htmlFor="prescription">Prescription & Treatment</label>
+          <label htmlFor="medication">Medication & Treatment</label>
           <textarea
-            id="prescription"
-            value={formData.prescription}
-            onChange={(e) => handleChange('prescription', e.target.value)}
+            id="medication"
+            value={formData.medication || ''}
+            onChange={(e) => {
+              handleChange('medication', e.target.value);
+            }}
             className="form-textarea"
             rows={3}
           />
@@ -355,6 +384,15 @@ ${formData.followUp || 'Not specified'}
           >
             <Download size={18} />
             Download as Text
+          </button>
+
+          <button 
+            type="button"
+            onClick={downloadAsJSON}
+            className="button button-secondary"
+          >
+            <Download size={18} />
+            Download as JSON
           </button>
         </div>
       </form>

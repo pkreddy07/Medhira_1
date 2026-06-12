@@ -3,6 +3,7 @@ import Navbar from '../components/common/Navbar';
 import { Link } from 'react-router-dom';
 import { Save, Cloud, Check, X, AlertCircle, TestTube } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import apiService from '../services/api';
 import googleDriveService from '../services/googleDrive';
 import '../styles/settings.css';
 

@@ -33,7 +33,7 @@ const LoginPage = () => {
       await login(email, password);
       navigate('/dashboard'); // Redirect to dashboard
       
-    } catch (err) {
+    } catch {
       // Error is already set in the auth hook
     } finally {
       setLoading(false);
@@ -47,7 +47,7 @@ const LoginPage = () => {
     try {
       await signInWithGoogle();
       navigate('/dashboard'); // Redirect to dashboard
-    } catch (err) {
+    } catch {
       // Error is already set in the auth hook
     } finally {
       setGoogleLoading(false);

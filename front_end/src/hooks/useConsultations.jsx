@@ -65,7 +65,7 @@ export const ConsultationsProvider = ({ children }) => {
         try {
           const response = await apiService.saveSummary(consultationData);
           newConsultation = {
-            id: response.consultation?.id || Date.now().toString(),
+            id: response.consultation?._id || response.consultation?.id || Date.now().toString(),
             ...consultationData,
             userId: user.id, // Store user ID
             createdAt: new Date().toISOString(),
@@ -113,6 +113,27 @@ export const ConsultationsProvider = ({ children }) => {
     localStorage.removeItem(getStorageKey());
   };
 
+  const deleteConsultation = async (consultationId) => {
+    try {
+      setError(null);
+
+      if (user) {
+        await apiService.deleteConsultation(consultationId);
+      }
+
+      const updatedConsultations = consultations.filter(consultation =>
+        (consultation._id || consultation.id) !== consultationId
+      );
+
+      setConsultations(updatedConsultations);
+      localStorage.setItem(getStorageKey(), JSON.stringify(updatedConsultations));
+    } catch (error) {
+      console.error('Failed to delete consultation:', error);
+      setError('Failed to delete consultation');
+      throw error;
+    }
+  };
+
   // Load consultations when user changes
   useEffect(() => {
     loadConsultations();
@@ -125,6 +146,7 @@ export const ConsultationsProvider = ({ children }) => {
     addConsultation,
     refreshConsultations: loadConsultations,
     clearConsultations,
+    deleteConsultation,
     setError
   };
 

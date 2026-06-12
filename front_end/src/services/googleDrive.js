@@ -283,9 +283,9 @@ DIAGNOSIS
 ${summaryData.diagnosis}
 
 ================================================================================
-PRESCRIPTION & TREATMENT
+MEDICATION & TREATMENT
 ================================================================================
-${summaryData.prescription || 'No prescription provided'}
+${summaryData.medication || 'No medication provided'}
 
 ================================================================================
 FOLLOW-UP INSTRUCTIONS

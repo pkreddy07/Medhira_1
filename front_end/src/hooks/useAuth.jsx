@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../utils/constants';
 
 const AuthContext = createContext();
 
@@ -36,7 +37,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setAuthError('');
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ export const AuthProvider = ({ children }) => {
   const signup = async (username, email, password) => {
     setAuthError('');
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +118,7 @@ export const AuthProvider = ({ children }) => {
   const resetPassword = async (email) => {
     setAuthError('');
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,7 +143,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Optional: Call backend logout endpoint if you have one
-      // await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
+      // await fetch(`${API_BASE_URL}/auth/logout`, {
       //   method: 'POST',
       //   headers: {
       //     'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -174,7 +175,7 @@ export const AuthProvider = ({ children }) => {
       ...options,
     };
 
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, config);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     
     // If unauthorized, logout user
     if (response.status === 401) {

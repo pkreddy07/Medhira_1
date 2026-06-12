@@ -75,7 +75,7 @@ const Dashboard = () => {
       history: 'No significant past medical history',
       examination: 'Neurological examination normal',
       diagnosis: 'Tension headaches',
-      prescription: 'Ibuprofen 400mg as needed',
+      medication: 'Ibuprofen 400mg as needed',
       followUp: 'Return in 2 weeks if symptoms persist'
     };
     

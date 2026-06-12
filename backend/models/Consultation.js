@@ -36,7 +36,7 @@ const consultationSchema = new mongoose.Schema({
     required: false, // Change to false for audio processing
     trim: true
   },
-  prescription: {
+  medication: {
     type: String,
     trim: true
   },

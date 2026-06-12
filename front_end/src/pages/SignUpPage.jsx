@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import '../styles/auth.css';
+import { API_BASE_URL } from '../utils/constants';
 
 const SignUpPage = () => {
   const [formData, setFormData] = useState({
@@ -57,7 +58,7 @@ const SignUpPage = () => {
       }
 
       // Call backend API
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
